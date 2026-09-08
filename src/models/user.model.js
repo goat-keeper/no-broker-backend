@@ -1,8 +1,4 @@
 import mongoose from "mongoose";
-import {
-  comparePassword as compareHashedPassword,
-  hashPassword,
-} from "../lib/hash.js";
 
 const userSchema = new mongoose.Schema(
   {
@@ -38,16 +34,6 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
-
-userSchema.pre("save", async function hashPassword() {
-  if (!this.isModified("password")) return;
-
-  this.password = await hashPassword(this.password);
-});
-
-userSchema.methods.comparePassword = function comparePassword(candidatePassword) {
-  return compareHashedPassword(candidatePassword, this.password);
-};
 
 const User = mongoose.model("User", userSchema);
 

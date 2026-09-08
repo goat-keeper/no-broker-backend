@@ -4,7 +4,7 @@ import {
   logout,
   signup,
 } from "../controllers/auth.controller.js";
-import { asyncHandler } from "../middlewares/async.handler.js";
+import { asyncHandler } from "../lib/Asynchandler.js";
 
 const authRouter = Router();
 

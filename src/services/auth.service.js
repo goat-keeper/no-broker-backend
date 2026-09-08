@@ -1,9 +1,13 @@
 import User from "../models/user.model.js";
-import { comparePassword } from "../lib/hash.js";
+import { comparePassword, hashPassword } from "../lib/hash.js";
 import { createToken, verifyToken } from "../lib/jwt.js";
 
 export async function registerUser(userData) {
-  const user = await User.create(userData);
+  const user = new User(userData);
+  await user.validate();
+  user.password = await hashPassword(user.password);
+  await user.save();
+
   return { user: toPublicUser(user), token: createToken(user) };
 }
 
