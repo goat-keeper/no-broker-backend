@@ -1,39 +1,89 @@
 import User from "../models/user.model.js";
+
 import { comparePassword, hashPassword } from "../lib/hash.js";
-import { createToken, verifyToken } from "../lib/jwt.js";
+import { signAccessToken, verifyAccessToken } from "../lib/jwt.js";
 
 export async function registerUser(userData) {
-  const user = new User(userData);
-  await user.validate();
-  user.password = await hashPassword(user.password);
-  await user.save();
+const user = new User(userData);
 
-  return { user: toPublicUser(user), token: createToken(user) };
+await user.validate();
+
+user.password = await hashPassword(user.password);
+
+await user.save();
+
+return {
+user: toPublicUser(user),
+token: signAccessToken({ userId: user._id }),
+};
 }
 
 export async function authenticateUser(email, password) {
-  const user = await User.findOne({ email }).select("+password");
+const user = await User.findOne({ email }).select("+password");
 
-  if (!user || !(await comparePassword(password, user.password))) {
-    const error = new Error("Invalid email or password");
-    error.statusCode = 401;
-    throw error;
-  }
+if (!user || !(await comparePassword(password, user.password))) {
+const error = new Error("Invalid email or password");
+error.statusCode = 401;
+throw error;
+}
 
-  return { user: toPublicUser(user), token: createToken(user) };
+return {
+user: toPublicUser(user),
+token: signAccessToken({ userId: user._id }),
+};
 }
 
 export function authenticateToken(token) {
-  return verifyToken(token);
+return verifyAccessToken(token);
+}
+
+export async function getMe(user) {
+const currUser = await User.findById(user.userId);
+
+if (!currUser) {
+const error = new Error("User not found");
+error.statusCode = 404;
+throw error;
+}
+
+return toPublicUser(currUser);
+}
+
+export async function completeUser(userId, phoneNumber, address, profileImage) {
+  
+const user = await User.findByIdAndUpdate(
+userId,
+{
+phoneNumber,
+address,
+profileImage,
+isOnboarded: true,
+},
+{
+new: true,
+runValidators: true,
+}
+);
+
+if (!user) {
+const error = new Error("User not found");
+error.statusCode = 404;
+throw error;
+}
+
+return toPublicUser(user);
 }
 
 function toPublicUser(user) {
-  return {
-    id: user._id,
-    username: user.username,
-    fullname: user.fullname,
-    email: user.email,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  };
+return {
+id: user._id,
+username: user.username,
+fullname: user.fullname,
+email: user.email,
+profileImage: user.profileImage,
+phoneNumber: user.phoneNumber,
+isOnboarded: user.isOnboarded,
+createdAt: user.createdAt,
+updatedAt: user.updatedAt,
+};
 }

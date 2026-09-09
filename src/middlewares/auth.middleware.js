@@ -1,37 +1,44 @@
-import { authenticateToken } from "../services/auth.service.js";
+import { verifyAccessToken } from "../lib/jwt.js";
 
-export function requireAuth(req, res, next) {
-  try {
-    const token = getToken(req);
+const getAccessToken = (req) => {
+const authHeader = req.headers.authorization;
 
-    if (!token) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-
-    req.auth = authenticateToken(token);
-    next();
-  } catch {
-    return res.status(401).json({ message: "Invalid or expired token" });
-  }
+if (authHeader?.startsWith("Bearer ")) {
+return authHeader.split(" ")[1];
 }
 
-function getToken(req) {
-  const authorization = req.get("authorization");
+const cookies =
+req.headers.cookie?.split(";").map((cookie) => cookie.trim()) ?? [];
 
-  if (authorization?.startsWith("Bearer ")) {
-    return authorization.slice(7);
-  }
+const accessTokenCookie = cookies.find((cookie) =>
+cookie.startsWith("accessToken=")
+);
 
-  return parseCookies(req.headers.cookie).accessToken;
+return accessTokenCookie?.split("=")[1];
+};
+
+export const protectedRoute = (req, res, next) => {
+try {
+const accessToken = getAccessToken(req);
+
+if (!accessToken) {
+  return res.status(401).json({
+    message: "No token provided",
+  });
 }
 
-function parseCookies(cookieHeader = "") {
-  return Object.fromEntries(
-    cookieHeader.split(";").filter(Boolean).map((cookie) => {
-      const separatorIndex = cookie.indexOf("=");
-      const key = cookie.slice(0, separatorIndex).trim();
-      const value = cookie.slice(separatorIndex + 1).trim();
-      return [key, decodeURIComponent(value)];
-    }),
-  );
+const decoded = verifyAccessToken(accessToken);
+
+req.user = decoded;
+
+next();
+
+} catch (err) {
+console.error("Auth middleware error:", err);
+
+return res.status(401).json({
+  message: "Invalid or expired token",
+});
+
 }
+};

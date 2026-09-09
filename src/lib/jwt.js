@@ -1,25 +1,11 @@
 import jwt from "jsonwebtoken";
 
-function getJwtSecret() {
-  if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET is not configured");
-  }
+export const signAccessToken = (payload) => {
+return jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
+expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN,
+});
+};
 
-  return process.env.JWT_SECRET;
-}
-
-export function createToken(user) {
-  return jwt.sign(
-    {
-      sub: user._id.toString(),
-      username: user.username,
-      email: user.email,
-    },
-    getJwtSecret(),
-    { expiresIn: process.env.JWT_EXPIRES_IN || "7d" },
-  );
-}
-
-export function verifyToken(token) {
-  return jwt.verify(token, getJwtSecret());
-}
+export const verifyAccessToken = (token) => {
+return jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+};
