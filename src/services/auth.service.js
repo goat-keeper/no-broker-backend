@@ -2,6 +2,7 @@ import User from "../models/user.model.js";
 
 import { comparePassword, hashPassword } from "../lib/hash.js";
 import { signAccessToken, verifyAccessToken } from "../lib/jwt.js";
+import cloudinary from "../lib/cloudinary.js";
 
 export async function registerUser(userData) {
 const user = new User(userData);
@@ -49,15 +50,15 @@ throw error;
 return toPublicUser(currUser);
 }
 
-export async function completeUser(userId, phoneNumber, address, profileImage) {
+export async function completeUser(userId, phoneNumber, address, profileUrl) {
   
 const user = await User.findByIdAndUpdate(
 userId,
 {
 phoneNumber,
 address,
-profileImage,
-isOnboarded: true,
+profileImage: profileUrl,
+onBoarded: true,
 },
 {
 new: true,
@@ -74,6 +75,12 @@ throw error;
 return toPublicUser(user);
 }
 
+export async function uploadToCloudinary(image){
+    const uploadResponse = await cloudinary.uploader.upload(image);
+    const imageUrl = uploadResponse.secure_url;
+    return imageUrl;
+}
+
 function toPublicUser(user) {
 return {
 id: user._id,
@@ -82,7 +89,7 @@ fullname: user.fullname,
 email: user.email,
 profileImage: user.profileImage,
 phoneNumber: user.phoneNumber,
-isOnboarded: user.isOnboarded,
+isOnboarded: user.onBoarded,
 createdAt: user.createdAt,
 updatedAt: user.updatedAt,
 };
